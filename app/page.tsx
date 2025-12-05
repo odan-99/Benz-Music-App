@@ -23,6 +23,7 @@ export default function Home() {
   // Refs for Audio and File Input
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   // Initialize Audio object on mount
   useEffect(() => {
@@ -35,6 +36,10 @@ export default function Home() {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
+      }
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
       }
     };
   }, []);
@@ -67,13 +72,54 @@ export default function Home() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && audioRef.current) {
-      // Unconditional Playback: System is trusted to handle the file
+      // Cleanup previous object URL
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
+      // Create new object URL and load audio
       const objectUrl = URL.createObjectURL(file);
+      objectUrlRef.current = objectUrl;
+      
+      // Pause and reset current playback
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      
+      // Set source and load
       audioRef.current.src = objectUrl;
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        setSongTitle(file.name.replace(/\.[^/.]+$/, "")); // Remove extension
-      }).catch(e => console.error("Playback failed:", e));
+      audioRef.current.load(); // This is crucial for mp3 files!
+      
+      // Wait for audio to be ready before playing
+      const playAudio = () => {
+        audioRef.current?.play()
+          .then(() => {
+            setIsPlaying(true);
+            setSongTitle(file.name.replace(/\.[^/.]+$/, "")); // Remove extension
+          })
+          .catch(e => {
+            console.error("Playback failed:", e);
+            setIsPlaying(false);
+          });
+      };
+
+      // Try to play immediately (user interaction context)
+      playAudio();
+
+      // Also listen for canplay event as fallback
+      const handleCanPlay = () => {
+        if (!isPlaying) {
+          playAudio();
+        }
+        audioRef.current?.removeEventListener('canplay', handleCanPlay);
+      };
+      
+      audioRef.current.addEventListener('canplay', handleCanPlay);
+      
+      // Reset file input to allow selecting the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -93,6 +139,11 @@ export default function Home() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current.src = ""; // Stop buffering
+    }
+    // Cleanup object URL
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
     }
     setIsPlaying(false);
     setSongTitle("Unknown Name");
