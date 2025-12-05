@@ -65,20 +65,14 @@ export default function Home() {
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const originalFile = event.target.files?.[0];
-    if (originalFile && audioRef.current) {
-      // Fix for iOS not recognizing some mp3 files as audio/mpeg
-      // We check if the name ends with .mp3 (case insensitive) and FORCE the type
-      let fileToPlay = originalFile;
-      if (originalFile.name.toLowerCase().endsWith('.mp3')) {
-        fileToPlay = new File([originalFile], originalFile.name, { type: 'audio/mpeg' });
-      }
-
-      const objectUrl = URL.createObjectURL(fileToPlay);
+    const file = event.target.files?.[0];
+    if (file && audioRef.current) {
+      // Unconditional Playback: System is trusted to handle the file
+      const objectUrl = URL.createObjectURL(file);
       audioRef.current.src = objectUrl;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
-        setSongTitle(fileToPlay.name.replace(/\.[^/.]+$/, "")); // Remove extension
+        setSongTitle(file.name.replace(/\.[^/.]+$/, "")); // Remove extension
       }).catch(e => console.error("Playback failed:", e));
     }
   };
@@ -145,7 +139,7 @@ export default function Home() {
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelect}
-        accept="audio/*,.mp3"
+        accept="*/*"
         className="hidden"
       />
 

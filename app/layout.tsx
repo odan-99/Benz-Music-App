@@ -17,12 +17,6 @@ import type { Viewport } from "next";
 export const metadata: Metadata = {
   title: "Benz Phone",
   description: "iOS 18 Style In-Call Music Player",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Benz Phone",
-  },
 };
 
 export const viewport: Viewport = {
